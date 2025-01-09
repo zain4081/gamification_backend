@@ -1,0 +1,11 @@
+from django.urls import path
+from profile import views as auth_views
+
+urlpatterns = [
+    path('signup/', auth_views.SignUpView.as_view(), name = 'signup'),
+    path('signin/', auth_views.SignInView.as_view(), name = 'signin'),
+    path('getProfile/', auth_views.GetProfile.as_view(), name = 'getProfile'),
+    path('generateResetPasswordLink/', auth_views.GeneratePasswordResetLink.as_view(), name = 'generateResetPasswordLink'),
+    path('resetPasswordByLink/', auth_views.ResetPasswordByLink.as_view(), name = 'resetPasswordByLink'),
+    path('updateUserProfile/', auth_views.UpdateUserProfile.as_view(), name = 'updateUserProfile'),
+]
