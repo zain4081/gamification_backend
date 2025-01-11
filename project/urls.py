@@ -11,6 +11,7 @@ urlpatterns = [
 #   ------------------------------------------------------------------------------------------
     path('<int:project_id>/requirement/add/', requirement_views.AddRequirementView.as_view(), name='requirement-add'),
     path('<int:project_id>/requirements/', requirement_views.GetProjectRequirementList.as_view(), name='requirement-list'),
-
+    path('requirement/<int:requirment_id>/update/', requirement_views.UpdateProjectRequirement.as_view(), name='requirment-update'),
+    path('requirement/<int:requirment_id>/delete/', requirement_views.DeleteProjectRequirement.as_view(), name="requirement-delete")
 ]
 

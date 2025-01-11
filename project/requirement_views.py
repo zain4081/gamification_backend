@@ -1,3 +1,4 @@
+from django.core.serializers import serialize
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -60,3 +61,39 @@ class GetProjectRequirementList(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+class UpdateProjectRequirement(APIView):
+    authentication_classes = (CustomTokenAuthentication,)
+    def patch(self, request, requirement_id):
+        try:
+            if not requirement_id:
+                return Response({"error": "Please Provide Requirement Identifier"},
+                                status=status.HTTP_400_BAD_REQUEST)
+            requirement_instance = project_models.Requirement.objects.get(pk=requirement_id)
+            serializer = RequirementsSerializer(requirement_instance, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"data": "Requirement Updated Successfully"},
+                                status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except project_models.Project.DoesNotExist:
+            return Response({"error": "Requirement Doen't Exist"},
+                            status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": "Please Provide Requirement Identifier"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+class DeleteProjectRequirement(APIView):
+    authentication_classes = (CustomTokenAuthentication,)
+    def delete(self, request, requirement_id):
+        try:
+            if not requirement_id:
+                return Response({"error": "Please Provide Requirement Identifier"},
+                                status=status.HTTP_400_BAD_REQUEST)
+            requirement = project_models.Requirement.objects.get(pk=requirement_id)
+            requirement.delete()
+            return Response({"data":"Successfully Deleted"}, status=status.HTTP_204_NO_CONTENT)
+        except project_models.Project.DoesNotExist:
+            return Response({"error": "Requirement Doen't Exist"},
+                            status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error", str(e)}, status=status.HTTP_400_BAD_REQUEST)
