@@ -4,7 +4,7 @@ from rest_framework.permissions import BasePermission
 
 class IsPmOrAdmin(BasePermission):
     """
-    Custom permission to grant access only to users with 'owner' or 'admin' roles,
+    CustomPagination.py permission to grant access only to users with 'owner' or 'admin' roles,
     or to superusers.
     """
 
@@ -21,7 +21,7 @@ class IsPmOrAdmin(BasePermission):
 
 class IsUserOrAdmin(BasePermission):
     """
-    Custom permission to grant access only to users with 'gardener' or 'admin' roles,
+    CustomPagination.py permission to grant access only to users with 'gardener' or 'admin' roles,
     or to superusers.
     """
 
@@ -39,7 +39,7 @@ class IsUserOrAdmin(BasePermission):
 
 class IsAdmin(BasePermission):
     """
-    Custom permission to grant access only to users with 'admin' roles,
+    CustomPagination.py permission to grant access only to users with 'admin' roles,
     or to superusers.
     """
 
@@ -52,3 +52,20 @@ class IsAdmin(BasePermission):
             return True
 
         raise PermissionDenied({"error": "You do not have permission to perform this action."})
+
+class IsSelf(BasePermission):
+    """
+    CustomPagination.py permission to grant access only to the user accessing their own resource,
+    or to admin users.
+    """
+
+    def has_object_permission(self, request, view, obj):
+        # Ensure the user is active
+        if not request.user.is_active:
+            raise PermissionDenied({"error": "Your Account Status is Inactive"})
+
+        # Check if the user is accessing their own data or is an admin
+        if obj == request.user:
+            return True
+
+        raise PermissionDenied({"error": "You do not have permission to access this resource."})

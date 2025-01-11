@@ -28,7 +28,29 @@ DEBUG = True
 ALLOWED_HOSTS = ['*']
 
 CORS_ORIGIN_ALLOW_ALL = True
-
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',  # Ensure OPTIONS is allowed
+]
+CORS_ALLOW_HEADERS = [
+    'ngrok-skip-browser-warning',  # Allow the ngrok-skip-browser-warning header
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'cookie',
+    'dnt',
+    'origin',
+    'referer',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    # Add any other headers you need to allow
+]
 
 # Application definition
 AUTH_USER_MODEL = 'profile.CustomUser'
@@ -44,6 +66,7 @@ INSTALLED_APPS = [
     'profile',
     'corsheaders',
     'project',
+    'ckeditor'
 ]
 
 MIDDLEWARE = [
@@ -129,3 +152,16 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'Full',  # Toolbar configuration (Full, Basic, etc.)
+        'width': '100%',  # Set the width of the CKEditor
+        'height': 300,  # Set the height of the CKEditor
+    },
+}
+
+import os
+
+# Set STATIC_ROOT to the desired directory where static files will be collected
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

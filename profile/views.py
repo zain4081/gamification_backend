@@ -1,3 +1,4 @@
+from profile.custom_permissions import IsPmOrAdmin
 from profile.token_auth import CustomTokenAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -53,7 +54,7 @@ class SignInView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class GetProfile(APIView):
-    authentication_classes = [CustomTokenAuthentication,]
+    authentication_classes = [CustomTokenAuthentication]
     def get(self, request):
         try:
             user = User.objects.get(pk=request.user.id)
@@ -120,3 +121,20 @@ class UpdateUserProfile(APIView):
             return Response({"error": "User does not exist"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)})
+
+class GetUserList(APIView):
+    authentication_classes = [CustomTokenAuthentication,]
+    permission_classes = [IsPmOrAdmin, ]
+    def get(self, request, role=None):
+        try:
+            user = None
+            if role=='pm':
+                user = User.objects.filter(is_pm=True)
+            elif role=='user':
+                user = User.objects.filter(is_pm=False, is_admin=False)
+            else:
+                user = User.objects.filter(is_admin=False)
+            serializer = UserSerializer(user, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

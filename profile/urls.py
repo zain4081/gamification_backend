@@ -8,4 +8,5 @@ urlpatterns = [
     path('generateResetPasswordLink/', auth_views.GeneratePasswordResetLink.as_view(), name = 'generateResetPasswordLink'),
     path('resetPasswordByLink/', auth_views.ResetPasswordByLink.as_view(), name = 'resetPasswordByLink'),
     path('updateUserProfile/', auth_views.UpdateUserProfile.as_view(), name = 'updateUserProfile'),
+    path('getUserList/<str:role>/', auth_views.GetUserList.as_view(), name = 'getUserList'),
 ]
