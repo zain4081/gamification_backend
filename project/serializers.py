@@ -9,7 +9,6 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = project_models.Project
         fields = '__all__'
 
-
 class ProjectAddSerializer(serializers.ModelSerializer):
     manager = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
     users = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True)
@@ -19,3 +18,8 @@ class ProjectAddSerializer(serializers.ModelSerializer):
         widgets = {
             'content': CKEditorWidget(),
         }
+
+class RequirementsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = project_models.Requirement
+        fields = '__all__'
