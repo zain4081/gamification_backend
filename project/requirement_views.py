@@ -50,16 +50,18 @@ class GetProjectRequirementList(APIView):
                 return Response({"error": "Please Provide Project Identifier"},
                                 status=status.HTTP_400_BAD_REQUEST)
             project = project_models.Project.objects.get(pk=project_id)
-            requirements = project.requirements.filter(project_id=project.id)
+            requirements = project_models.Requirement.objects.filter(project_id=project.id)
             serializer = RequirementsSerializer(requirements, many=True)
+            print(serializer.data)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Project.DoesNotExist:
             return Response(
                 {"error": "Project Does Not Exist"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_404_NOT_FOUND
             )
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            print(str(e))
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class UpdateProjectRequirement(APIView):
     authentication_classes = (CustomTokenAuthentication,)
