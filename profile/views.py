@@ -20,7 +20,6 @@ from django.utils import timezone
 
 User = get_user_model()
 class SignUpView(APIView):
-    permission_classes = [AllowAny, ]
     def post(self, request):
         try:
             serializer = RegisterSerializer(data=request.data)
@@ -29,6 +28,7 @@ class SignUpView(APIView):
                 token, _ = Token.objects.get_or_create(user=instance)
                 if _:
                     return Response({"success": "User Registered Successfully"}, status=status.HTTP_201_CREATED)
+                print("error:", custom_error_message(serializer.errors))
             return Response(custom_error_message(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

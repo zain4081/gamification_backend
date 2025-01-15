@@ -24,12 +24,13 @@ class AddRequirementView(APIView):
             project = project_models.Project.objects.get(pk=project_id)
             requirement_instance = project_models.Requirement.objects.create(
                 project_id=project.id,
-                added_by=request.user,
+                added_by_id=request.user.id,
             )
-            serializer = RequirementsSerializer(requirement_instance, data=request.data)
+            serializer = RequirementsSerializer(requirement_instance, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
+            print(serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Project.DoesNotExist:
             return Response(
