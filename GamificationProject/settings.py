@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import dotenv_values
 
+env = dotenv_values()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-qdf!fv=z%6fli+e=oy$d%=z4fp@l!_^x$4r^-(g6fbiqe4e6n5'
+SECRET_KEY = env.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -109,6 +111,14 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.mysql',
+    #     'NAME': env.get('MYSQL_DATABASE'),
+    #     'USER': env.get('MYSQL_USER'),
+    #     'PASSWORD': env.get('MYSQL_PASSWORD'),
+    #     'HOST': env.get('MYSQL_HOST'),
+    #     'PORT': env.get('MYSQL_PORT'),
+    # },
 }
 
 

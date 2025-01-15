@@ -1,3 +1,4 @@
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -22,7 +23,7 @@ class GetProjectList(APIView):
             if request.user.is_admin:
                 projects = projects
             elif request.user.is_pm:
-                projects = projects.filter(is_pm=True)
+                projects = projects.filter(manager_id=request.user.id)
             else:
                 projects = projects.filter(users__in=[request.user.id])
 
@@ -59,7 +60,7 @@ class AddProject(APIView):
 
 class GetProjectDetail(APIView):
     authentication_classes = (CustomTokenAuthentication,)
-    permission_classes = (IsPmOrAdmin, IsSelf)
+    permission_classes = (AllowAny,)
     def get(self, request, pk):
         try:
             if not pk:
