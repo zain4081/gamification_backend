@@ -1,4 +1,3 @@
-from django.core.serializers import serialize
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -7,9 +6,11 @@ from profile.token_auth import CustomTokenAuthentication
 from profile.custom_permissions import IsSelf, IsPmOrAdmin, IsAdmin
 from project import models as project_models
 from project.models import Project
-from project.serializers import ProjectSerializer, ProjectAddSerializer, RequirementsSerializer
+from project.serializers import ProjectSerializer, ProjectAddSerializer, RequirementsSerializer, \
+    AdminRequirementSerializer
 from profile.CustomPagination import CustomPagination
 
+User = get_user_model()
 class AddRequirementView(APIView):
     authentication_classes = (CustomTokenAuthentication,)
     def post(self, request, project_id):
@@ -53,6 +54,8 @@ class GetProjectRequirementList(APIView):
             project = project_models.Project.objects.get(pk=project_id)
             requirements = project_models.Requirement.objects.filter(project_id=project.id)
             serializer = RequirementsSerializer(requirements, many=True)
+            if request.user.is_pm or request.user.is_admin:
+                serializer = AdminRequirementSerializer(requirements, many=True)
             print(serializer.data)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Project.DoesNotExist:

@@ -9,6 +9,7 @@ from project import models as project_models
 from project.models import Project
 from project.serializers import ProjectSerializer, ProjectAddSerializer
 from profile.CustomPagination import CustomPagination
+from profile.utils import custom_error_message
 # Create your views here.
 
 User = get_user_model()
@@ -107,3 +108,24 @@ class UpdateProject(APIView):
             return Response({'error': 'Project does not exist'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class AssignMinMax(APIView):
+    authentication_classes = (CustomTokenAuthentication,)
+    permission_classes = (IsPmOrAdmin, )
+    def patch(self, request, project_id):
+        try:
+            project_instance = project_models.Project.objects.get(pk=project_id)
+            if request.user.is_pm and project_instance.manager.id != request.user.id:
+                return Response({'error': ' You are Not Authorize to Access this Project'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            serializer = ProjectSerializer(project_instance, data=request.data, partial=True)
+            if serializer.is_valid():
+                instance = serializer.save()
+                instance.is_start_voting = True
+                instance.save()
+                return Response({'data': 'Assigned Successfully'}, status=status.HTTP_200_OK)
+            return Response(custom_error_message(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
+        except project_models.Project.DoesNotExist:
+            return Response({'error': 'Project Not Exist'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
