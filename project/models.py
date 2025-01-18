@@ -52,7 +52,7 @@ class Requirement(TimeStampedModel):
         """
         Checks if a specific user has voted for this requirement.
         """
-        return self.received_points.filter(user=user).exists()
+        return self.received_points.filter(user_id=user).exists()
 
 class Points(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="given_points")

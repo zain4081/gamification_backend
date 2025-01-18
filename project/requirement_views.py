@@ -52,8 +52,8 @@ class GetProjectRequirementList(APIView):
                 return Response({"error": "Please Provide Project Identifier"},
                                 status=status.HTTP_400_BAD_REQUEST)
             project = project_models.Project.objects.get(pk=project_id)
-            requirements = project_models.Requirement.objects.filter(project_id=project.id)
-            serializer = RequirementsSerializer(requirements, many=True)
+            requirements = project_models.Requirement.objects.filter(project_id=project.id, )
+            serializer = RequirementsSerializer(requirements, context={'request': request.user.id}, many=True)
             if request.user.is_pm or request.user.is_admin:
                 serializer = AdminRequirementSerializer(requirements, many=True)
             print(serializer.data)

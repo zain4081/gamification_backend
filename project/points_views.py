@@ -25,17 +25,19 @@ class UserAddPoints(APIView):
             if not points:
                 return Response({"error": "Please Enter Points"}, status=status.HTTP_400_BAD_REQUEST)
             requirement = project_models.Requirement.objects.get(pk=requirement_id)
+            user = User.objects.get(pk=request.user.id)
             if not requirement.project.is_start_voting:
                 return Response({"error": "Voting is Not Started yet"}, status=status.HTTP_400_BAD_REQUEST)
             if requirement.project.max_points >= points >= requirement.project.min_points:
                 data = {
                     "points": points,
-                    "user_id": request.user.id,
-                    "requirement_id": requirement.id
+                    "user": user.id,
+                    "requirement": requirement.id
                 }
                 serializer = PointsSerializer(data=data)
                 if serializer.is_valid():
                     serializer.save()
+                print(serializer.errors)
                 return Response(custom_error_message(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
             return Response({"error": "Points can't Exceed Limit"}, status=status.HTTP_400_BAD_REQUEST)
 

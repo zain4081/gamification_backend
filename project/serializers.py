@@ -30,6 +30,9 @@ class RequirementsSerializer(serializers.ModelSerializer):
     isCompleted = serializers.BooleanField(default=lambda: random.choice([True, False]))
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())  # Automatically set the user
     has_voted = serializers.SerializerMethodField()  # Field to check if the user has voted
+    min_points = serializers.SerializerMethodField()
+    max_points = serializers.SerializerMethodField()
+
     dueDate = serializers.DateField(default=lambda: fake.date_between(
         start_date=datetime.today() - timedelta(days=30),
         end_date=datetime.today() + timedelta(days=30)
@@ -59,9 +62,16 @@ class RequirementsSerializer(serializers.ModelSerializer):
         Checks if the current user has voted for this requirement.
         """
         request = self.context.get('request')
+        print("request", request)
         if request:
-            return obj.requirement.has_user_voted(request.user)
+            return obj.has_user_voted(request)
         return False
+
+    def get_min_points(self, obj):
+        return obj.project.min_points
+
+    def get_max_points(self, obj):
+        return obj.project.max_points
 
 class AdminRequirementSerializer(serializers.ModelSerializer):
     isCompleted = serializers.BooleanField(default=lambda: random.choice([True, False]))
