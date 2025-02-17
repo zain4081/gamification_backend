@@ -10,7 +10,6 @@ from profile.serializers import (
     UserSerializer, UpdateUserSerializer,
     AddRoleSerializer, AddUserSerializer
 )
-from profile import custom_permissions
 from django.contrib.auth import get_user_model
 from profile.utils import (
     custom_error_message,
@@ -163,7 +162,7 @@ class AdminAddRole(APIView):
 
 class AdminPmAddUser(APIView):
     authentication_classes = [CustomTokenAuthentication,]
-    permission_classes = [IsPmOrAdmin]
+    permission_classes = [custom_permissions.IsPmOrAdmin]
     def post(self, request):
         try:
             serializer = AddUserSerializer(data=request.data)
