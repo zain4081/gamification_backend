@@ -8,6 +8,7 @@ from rest_framework import status
 from profile.serializers import (
     RegisterSerializer,
     UserSerializer, UpdateUserSerializer,
+    AddRoleSerializer, AddUserSerializer
 )
 from profile import custom_permissions
 from django.contrib.auth import get_user_model
@@ -17,6 +18,7 @@ from profile.utils import (
     generate_token,
 )
 from django.utils import timezone
+from profile.models import Roles
 
 User = get_user_model()
 class SignUpView(APIView):
@@ -138,3 +140,37 @@ class GetUserList(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class AdminAddRole(APIView):
+    authentication_classes = [CustomTokenAuthentication,]
+    permission_classes = [IsPmOrAdmin]
+
+    def post(self, request):
+        try:
+            name = request.data.get("name")
+            if not name:
+                return Response({"error": "Please Provide Role Name Field"}, status=status.HTTP_400_BAD_REQUEST)
+            data = {
+                "name": name,
+            }
+            serializer = AddRoleSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"success": "Role Added Successfully"}, status=status.HTTP_201_CREATED)
+            return Response(custom_error_message(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class AdminPmAddUser(APIView):
+    authentication_classes = [CustomTokenAuthentication,]
+    permission_classes = [IsPmOrAdmin]
+    def post(self, request):
+        try:
+            serializer = AddUserSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"success": "User Added Successfully"}, status=status.HTTP_201_CREATED)
+            return Response(custom_error_message(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        

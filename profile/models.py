@@ -19,7 +19,9 @@ class CustomUser(TimeStampedModel, AbstractUser):
     password = models.CharField(max_length=255)
     is_pm = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
+    is_client = models.BooleanField(default=False)
+    is_user = models.BooleanField(default=False)
     reset_password_token = models.CharField(max_length=255, null=True, blank=True)
     is_reset_attempt = models.BooleanField(default=False)
-    roles = models.OneToOneField(Roles, on_delete=models.CASCADE)
+    roles = models.ForeignKey(Roles, on_delete=models.CASCADE)
 
