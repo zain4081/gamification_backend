@@ -14,4 +14,5 @@ urlpatterns = [
     path('AddUserbyRole/', admin_views.AdminPmAddUser.as_view(), name = 'AddUser'),
     path('users/', admin_views.AdminPmUserList.as_view(), name = 'UserList'),
     path('usersPaginated/', admin_views.AdminPmUserListPaginated.as_view(), name = 'UserListPaginated'),
+    path('userDelete/<int:user_id>/', admin_views.DeleteUser.as_view(), name = 'DeleteUser'),
 ]

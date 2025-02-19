@@ -55,7 +55,6 @@ class AdminPmAddUser(APIView):
             return Response(custom_error_message(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
 
 class AdminPmUserList(APIView):
     authentication_classes = [CustomTokenAuthentication,]
@@ -97,5 +96,22 @@ class AdminPmUserListPaginated(APIView):
             
             serializer = UserSerializer(paginated_users, many=True)
             return paginator.get_paginated_response(serializer.data)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class DeleteUser(APIView):
+    authentication_classes = [CustomTokenAuthentication,]
+    permission_classes = [IsPmOrAdmin, ]
+
+    def delete(self, request, user_id):
+        try:
+            if not user_id:
+                return Response({"error":"Please Provide User Valid Identifier"}, status=status.HTTP_400_BAD_REQUEST)
+            user_obj = User.objects.get(pk=user_id)
+            del_count, _ =user_obj.delete()
+            if del_count > 0:
+                return Response({"success":"User Deleted Successfully"}, status=status.HTTP_200_OK)
+        except User.DoesNotExist():
+            return Response({"error":"User doesn't Exist"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
