@@ -19,7 +19,7 @@ class IsPmOrAdmin(BasePermission):
 
         raise PermissionDenied({"error": "You do not have permission to perform this action."})
 
-class IsUserOrAdmin(BasePermission):
+class IsUser(BasePermission):
     """
     CustomPagination.py permission to grant access only to users with 'gardener' or 'admin' roles,
     or to superusers.
@@ -31,8 +31,7 @@ class IsUserOrAdmin(BasePermission):
             raise PermissionDenied({"error": "Your Account Status is Inactive"})
 
         # Check if the user has the 'owner' or 'admin' role, or if they are a superuser
-        user_role = getattr(request.user, 'role', None)
-        if not request.user.is_pm or request.user.is_admin:
+        if request.user.is_user:
             return True
 
         raise PermissionDenied({"error": "You do not have permission to perform this action."})
