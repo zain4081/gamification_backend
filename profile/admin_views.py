@@ -5,6 +5,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.db.models import Q
 from rest_framework import status
 from profile.serializers import (
     RegisterSerializer,
@@ -62,7 +63,7 @@ class AdminPmUserList(APIView):
 
     def get(self, request):
         try:
-            users_list = User.objects.filter(is_pm=False, is_admin=False)
+            users_list = User.objects.filter(is_admin=False)
             if request.user.is_user:
                 projects = Project.objects.filter(users=request.user)
                 mutual_users = set()
@@ -83,6 +84,14 @@ class AdminPmUserListPaginated(APIView):
     def get(self, request):
         try:
             users_list = User.objects.filter(is_pm=False, is_admin=False)
+            role = request.query_params.get('role', None)
+            q = request.query_params.get('q', None)
+            if role:
+                users_list = users_list.filter(roles_id=role)
+            if q:
+                users_list = users_list.filter(
+                    Q(username__icontains=q) | Q(roles__name__icontains=q) | Q(email__icontains=q)
+                )
             if request.user.is_user:
                 projects = Project.objects.filter(users=request.user)
                 mutual_users = set()
@@ -111,7 +120,7 @@ class DeleteUser(APIView):
             del_count, _ =user_obj.delete()
             if del_count > 0:
                 return Response({"success":"User Deleted Successfully"}, status=status.HTTP_200_OK)
-        except User.DoesNotExist():
+        except User.DoesNotExist:
             return Response({"error":"User doesn't Exist"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

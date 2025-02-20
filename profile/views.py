@@ -9,7 +9,8 @@ from rest_framework import status
 from profile.serializers import (
     RegisterSerializer,
     UserSerializer, UpdateUserSerializer,
-    AddRoleSerializer, AddUserSerializer
+    AddRoleSerializer, AddUserSerializer,
+    RoleSerializer,
 )
 from django.contrib.auth import get_user_model
 from profile.utils import (
@@ -141,3 +142,13 @@ class GetUserList(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+class GetRoleList(APIView):
+    authentication_classes = [CustomTokenAuthentication,]
+    permission_classes = [IsPmOrAdmin]
+    def get(self, request):
+        try:
+            roles = Roles.objects.all()
+            serializer = RoleSerializer(roles, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

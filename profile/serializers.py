@@ -59,6 +59,11 @@ class AddRoleSerializer(serializers.ModelSerializer):
         model = Roles
         fields = ['name']
 
+class RoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Roles
+        fields = "__all__"
+
 class AddUserSerializer(serializers.ModelSerializer):
     roles_id = serializers.CharField(write_only=True)
     access = serializers.ChoiceField(choices=['is_admin', 'is_client', 'is_pm', 'is_user'], write_only=True)
