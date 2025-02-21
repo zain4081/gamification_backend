@@ -8,6 +8,7 @@ class Project(TimeStampedModel):
     name = models.CharField(max_length=100)
     description = RichTextField()
     manager = models.ForeignKey(User, on_delete=models.CASCADE, related_name='project_manager')
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='project_client')
     users = models.ManyToManyField(User, related_name='project_users')
     is_start_voting = models.BooleanField(default=True)
     is_finish_voting = models.BooleanField(default=True)

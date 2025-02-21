@@ -32,10 +32,8 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ["id", "username", "email", "role", "desg"]
 
     def get_role(self, obj):
-        if obj.is_admin:
+        if obj.is_admin or obj.is_pm:
             return "admin"
-        elif obj.is_pm:
-            return "pm"
         elif obj.is_user:
             return "user"
         elif obj.is_client:

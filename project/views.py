@@ -21,13 +21,13 @@ class GetProjectList(APIView):
         try:
             # Filter projects based on user role
             projects = project_models.Project.objects.all()
-            if request.user.is_admin:
-                projects = projects
-            elif request.user.is_pm:
-                projects = projects.filter(manager_id=request.user.id)
-            else:
-                projects = projects.filter(users__in=[request.user.id])
 
+            if request.user.is_client:
+                projects = projects.filter(client_id=request.user.id)
+            elif request.user.is_user:
+                projects = projects.filter(users__in=[request.user.id])
+            else:
+                projects = projects.filter(manager_id=request.user.id)
             # Pagination handling
             paginator = CustomPagination()
             paginated_projects = paginator.paginate_queryset(projects, request)
@@ -48,8 +48,9 @@ class AddProject(APIView):
     permission_classes = (IsPmOrAdmin,)
     def post(self, request, format=None):
         try:
-            print()
-            serializer = ProjectAddSerializer(data=request.data)
+            data = request.data
+            data["manager"] = request.user.id
+            serializer = ProjectAddSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -76,12 +77,14 @@ class GetProjectDetail(APIView):
 
 class DeleteProject(APIView):
     authentication_classes = (CustomTokenAuthentication,)
-    permission_classes = (IsAdmin,)
+    permission_classes = (IsPmOrAdmin,)
     def delete(self, request, pk):
         try:
             if not pk:
                 return Response({'error': 'Please Provide Project Identifier'}, status=status.HTTP_400_BAD_REQUEST)
             project = project_models.Project.objects.get(pk=pk)
+            if project.manager_id != request.user.id:
+                return Response({'error': "You Aren't Authorized to Perform this Action"}, status=status.HTTP_403_FORBIDDEN)
             count, deleteion = project.delete()
             print(deleteion)
             print(count)
@@ -99,6 +102,8 @@ class UpdateProject(APIView):
             if not pk:
                 return Response({'error': 'Please Provide Project Identifier'}, status=status.HTTP_400_BAD_REQUEST)
             project = project_models.Project.objects.get(pk=pk)
+            if project.manager_id != request.user.id:
+                return Response({'error': "You Aren't Authorized to Perform this Action"}, status=status.HTTP_403_FORBIDDEN)
             serializer = ProjectAddSerializer(project, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -115,7 +120,7 @@ class AssignMinMax(APIView):
     def patch(self, request, project_id):
         try:
             project_instance = project_models.Project.objects.get(pk=project_id)
-            if request.user.is_pm and project_instance.manager.id != request.user.id:
+            if project_instance.manager.id != request.user.id:
                 return Response({'error': ' You are Not Authorize to Access this Project'},
                                 status=status.HTTP_400_BAD_REQUEST)
             serializer = ProjectSerializer(project_instance, data=request.data, partial=True)

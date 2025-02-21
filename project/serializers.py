@@ -21,7 +21,7 @@ class ProjectAddSerializer(serializers.ModelSerializer):
     users = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True)
     class Meta:
         model = project_models.Project
-        fields = ["name", "description", "manager", "users"]
+        fields = ["name", "description", "client", "manager", "users"]
         widgets = {
             'content': CKEditorWidget(),
         }
