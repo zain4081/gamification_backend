@@ -10,7 +10,8 @@ urlpatterns = [
     path('delete/<int:pk>/', project_views.DeleteProject.as_view(), name='project-delete'),
     path('update/<int:pk>/', project_views.UpdateProject.as_view(), name='project-update'),
     path('<int:project_id>/AssignMinMax/', project_views.AssignMinMax.as_view(), name='assign_minmax'),
-#   ------------------------------------------------------------------------------------------
+    path('<int:project_id>/review/', project_views.RequestForReview.as_view(), name='assign_minmax'),
+#   ------------------------------------Requirements------------------------------------------------------
     path('<int:project_id>/requirement/add/', requirement_views.AddRequirementView.as_view(), name='requirement-add'),
     path('<int:project_id>/requirements/', requirement_views.GetProjectRequirementList.as_view(),
          name='requirement-list'),

@@ -14,6 +14,7 @@ class Project(TimeStampedModel):
     is_finish_voting = models.BooleanField(default=True)
     min_points = models.PositiveIntegerField(default=0)
     max_points = models.PositiveIntegerField(default=10)
+    can_review = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -24,10 +25,8 @@ class Requirement(TimeStampedModel):
     description = models.TextField()
     added_by = models.ForeignKey(User, on_delete=models.CASCADE)
 
-
     def __str__(self):
         return self.name
-
     @property
     def is_all_users_voted(self):
         """

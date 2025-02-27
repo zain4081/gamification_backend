@@ -16,12 +16,18 @@ class RegisterSerializer(serializers.ModelSerializer):
             'username': {'required': True},
         }
     def create(self, validated_data):
+        role, _ = Roles.objects.get_or_create(name="Manager")
+        if _:
+            d, _ = Roles.objects.get_or_create(name="Developer")
+            c, _ = Roles.objects.get_or_create(name="Client")
+            s, _ = Roles.objects.get_or_create(name="StakeHolder")
+            a, _ = Roles.objects.get_or_create(name="Analyst")
         user = User.objects.create_user(
             email=validated_data['email'],
             username=validated_data['username'].lower(),
             password=validated_data.get('password'),
             is_pm=validated_data.get('is_pm', True),
-            roles_id=1,
+            roles_id=role.id,
         )
         return user
 class UserSerializer(serializers.ModelSerializer):
@@ -64,24 +70,24 @@ class RoleSerializer(serializers.ModelSerializer):
 
 class AddUserSerializer(serializers.ModelSerializer):
     roles_id = serializers.CharField(write_only=True)
-    access = serializers.ChoiceField(choices=['is_admin', 'is_client', 'is_pm', 'is_user'], write_only=True)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'roles_id', 'access']
+        fields = ['username', 'email', 'roles_id']
 
     def create(self, validated_data):
         roles_id = validated_data.pop('roles_id', None)
-        access = validated_data.pop('access', None)
-
-        # Validate Role
-        role = Roles.objects.get(id=roles_id)
+        role = Roles.objects.get(pk=roles_id)
         if not role:
             raise serializers.ValidationError({"roles_id": "Role does not exist."})
-
-        # Set user permissions dynamically
+        
         user_data = {key: False for key in ['is_admin', 'is_client', 'is_pm', 'is_user']}
-        user_data[access] = True
+        if role.name == "Manager":
+            user_data['is_pm'] = True
+        elif role.name == 'Client':
+            user_data['is_client'] = True
+        else:
+            user_data['is_user'] = True
 
         # Create user
         user = User.objects.create(roles_id=role.id, **validated_data, **user_data)

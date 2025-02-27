@@ -115,6 +115,7 @@ class UpdateProject(APIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 class AssignMinMax(APIView):
+
     authentication_classes = (CustomTokenAuthentication,)
     permission_classes = (IsPmOrAdmin, )
     def patch(self, request, project_id):
@@ -134,3 +135,24 @@ class AssignMinMax(APIView):
             return Response({'error': 'Project Not Exist'}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class RequestForReview(APIView):
+    authentication_classes = [CustomTokenAuthentication,]
+    
+    def post(self, request, project_id=None):
+        try:
+            if not project_id:
+                return Response({"error": "Please Provide Project Identifier"}, status=status.HTTP_400_BAD_REQUEST)
+            project = Project.objects.get(pk=project_id)
+            if project.manager.id == request.user.id:
+                project.can_review = True
+            elif project.client.id == request.user.id:
+                project.can_review = False
+            else:
+                return Response({"error": "You aren't Authorized to Peform this action"}, status=status.HTTP_403_FORBIDDEN)
+            project.save()
+            return Response({"success": "Successfully Requested"}, status=status.HTTP_200_OK)
+        except Project.DoesNotExist:
+            return Response({"error": "Requested Project Doesn't Exist"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

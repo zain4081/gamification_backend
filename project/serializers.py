@@ -12,9 +12,21 @@ User = get_user_model()
 fake = Faker()
 
 class ProjectSerializer(serializers.ModelSerializer):
+    voting_status = serializers.SerializerMethodField()
     class Meta:
         model = project_models.Project
         fields = '__all__'
+    
+    def get_voting_status(self, obj):
+        requirments = Requirement.objects.filter(project_id=self.id)
+        users = self.users.all()
+        for req in requirments:
+            if set(users) <= set(User.objects.filter(given_points__requirements=req)):
+                if requirments[-1] == req:
+                    return True
+                continue
+            return False
+        
 
 class ProjectAddSerializer(serializers.ModelSerializer):
     manager = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
@@ -62,7 +74,6 @@ class RequirementsSerializer(serializers.ModelSerializer):
         Checks if the current user has voted for this requirement.
         """
         request = self.context.get('request')
-        print("request", request)
         if request:
             return obj.has_user_voted(request)
         return False
@@ -83,9 +94,10 @@ class AdminRequirementSerializer(serializers.ModelSerializer):
                                  default=lambda: [random.choice(['high', 'medium', 'low']),
                                                   random.choice(['update', 'team'])])
     assignee = serializers.SerializerMethodField()
-    is_all_users_voted = serializers.SerializerMethodField
-    users_status = serializers.SerializerMethodField
-    score = serializers.SerializerMethodField
+    is_all_users_voted = serializers.SerializerMethodField()
+    users_status = serializers.SerializerMethodField()
+    score = serializers.SerializerMethodField()
+
     class Meta:
         model = Requirement
         fields = ['id', 'name', 'description', 'dueDate', 'tags', 'assignee',
@@ -97,6 +109,8 @@ class AdminRequirementSerializer(serializers.ModelSerializer):
         return obj.score
     def get_users_status(self, obj):
         return obj.users_status
+    def get_is_reviewed(self,obj):
+        return obj.is_reviewed
     def get_assignee(self, obj):
         assignee = obj.added_by
         return {

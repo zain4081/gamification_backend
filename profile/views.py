@@ -34,6 +34,7 @@ class SignUpView(APIView):
                 print("error:", custom_error_message(serializer.errors))
             return Response(custom_error_message(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            print(str(e))
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class SignInView(APIView):
     permission_classes = [AllowAny, ]
@@ -130,13 +131,8 @@ class GetUserList(APIView):
     permission_classes = [IsPmOrAdmin, ]
     def get(self, request, role=None):
         try:
-            user = None
-            if role=='pm':
-                user = User.objects.filter(is_pm=True)
-            elif role=='user':
-                user = User.objects.filter(is_pm=False, is_admin=False)
-            else:
-                user = User.objects.filter(is_admin=False)
+            filter_field = f"is_{role}"
+            user = User.objects.filter(**{filter_field: True})
             serializer = UserSerializer(user, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:

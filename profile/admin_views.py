@@ -83,7 +83,7 @@ class AdminPmUserListPaginated(APIView):
  
     def get(self, request):
         try:
-            users_list = User.objects.filter(is_pm=False, is_admin=False)
+            users_list = User.objects.filter(is_admin=False).exclude(id=request.user.id)
             role = request.query_params.get('role', None)
             q = request.query_params.get('q', None)
             if role:
