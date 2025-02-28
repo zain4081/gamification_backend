@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from profile.token_auth import CustomTokenAuthentication
-from profile.custom_permissions import IsSelf, IsPmOrAdmin, IsAdmin
+from profile.custom_permissions import IsSelf, IsPmOrAdmin, IsAdmin, IsClient
 from project import models as project_models
 from project.models import Project
 from project.serializers import ProjectSerializer, ProjectAddSerializer, RequirementsSerializer, \
@@ -52,11 +52,16 @@ class GetProjectRequirementList(APIView):
                 return Response({"error": "Please Provide Project Identifier"},
                                 status=status.HTTP_400_BAD_REQUEST)
             project = project_models.Project.objects.get(pk=project_id)
+            if request.user.is_client and project.can_review == False:
+                return Response([], status=status.HTTP_200_OK)
             requirements = project_models.Requirement.objects.filter(project_id=project.id, )
-            serializer = RequirementsSerializer(requirements, context={'request': request.user.id}, many=True)
+            if not request.user.is_pm and not request.user.is_admin:
+                requirements = requirements.filter(is_confirmed=False)
+            requirements = requirements.order_by('p_index')
             if request.user.is_pm or request.user.is_admin:
                 serializer = AdminRequirementSerializer(requirements, many=True)
-            print(serializer.data)
+            else:
+                serializer = RequirementsSerializer(requirements, context={'request': request.user.id}, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Project.DoesNotExist:
             return Response(
@@ -102,4 +107,23 @@ class DeleteProjectRequirement(APIView):
             return Response({"error": "Requirement Doen't Exist"},
                             status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({"error", str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+
+class MarkRequirmentStatus(APIView):
+    authentication_classes = (CustomTokenAuthentication,)
+    permission_classes = [IsClient, ]
+    def post(self, request, requirment_id, confirmed=None):
+        try:
+            requirment = project_models.Requirement.objects.get(pk=requirment_id)
+            if requirment.project.client.id != request.user.id:
+                return Response({"error": "You Aren't Authorized to Perform this Action"}, status=status.HTTP_403_FORBIDDEN)
+            if confirmed:
+                requirment.is_confirmed = True
+            requirment.is_marked = True
+            requirment.save()
+            return Response({"success": "Marked Successfully"}, status=status.HTTP_200_OK)
+        except project_models.Requirement.DoesNotExist:
+            return Response({"error": "Requirment Doesn't Exist"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

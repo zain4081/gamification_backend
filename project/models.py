@@ -24,6 +24,9 @@ class Requirement(TimeStampedModel):
     name = models.CharField(max_length=100)
     description = models.TextField()
     added_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    is_confirmed = models.BooleanField(default=False)
+    is_marked = models.BooleanField(default=False)
+    p_index = models.PositiveBigIntegerField(default=0)
 
     def __str__(self):
         return self.name
@@ -58,7 +61,6 @@ class Points(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="given_points")
     requirement = models.ForeignKey(Requirement, on_delete=models.CASCADE, related_name="received_points")
     points = models.PositiveIntegerField()
-
     class Meta:
         unique_together = ('user', 'requirement')  # Prevents duplicate points from the same user for the same requirement
 

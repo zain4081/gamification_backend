@@ -68,3 +68,19 @@ class IsSelf(BasePermission):
             return True
 
         raise PermissionDenied({"error": "You do not have permission to access this resource."})
+
+class IsClient(BasePermission):
+    """
+    CustomPagination.py permission to grant access only to users with 'admin' roles,
+    or to superusers.
+    """
+
+    def has_permission(self, request, view):
+        # Ensure the user is active
+        if not request.user.is_active:
+            raise PermissionDenied({"error": "Your Account Status is Inactive"})
+
+        if request.user.is_client:
+            return True
+
+        raise PermissionDenied({"error": "You do not have permission to perform this action."})

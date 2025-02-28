@@ -18,11 +18,13 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = '__all__'
     
     def get_voting_status(self, obj):
-        requirments = Requirement.objects.filter(project_id=self.id)
-        users = self.users.all()
+        requirments = Requirement.objects.filter(project_id=obj.id)
+        if requirments.count() == 0:
+            return False
+        users = obj.users.all()
         for req in requirments:
-            if set(users) <= set(User.objects.filter(given_points__requirements=req)):
-                if requirments[-1] == req:
+            if set(users) <= set(User.objects.filter(given_points__requirement=req)):
+                if requirments[len(requirments)-1] == req:
                     return True
                 continue
             return False
@@ -123,3 +125,13 @@ class PointsSerializer(serializers.ModelSerializer):
     class Meta:
         model = project_models.Points
         fields = '__all__'
+
+class RequimentListSerializer(serializers.ModelSerializer):
+    score = serializers.SerializerMethodField()
+
+    class Meta:
+        model = project_models.Requirement
+        fields = '__all__'
+
+    def get_score(self, obj):
+        return obj.score

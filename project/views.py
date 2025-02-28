@@ -10,6 +10,7 @@ from project.models import Project
 from project.serializers import ProjectSerializer, ProjectAddSerializer
 from profile.CustomPagination import CustomPagination
 from profile.utils import custom_error_message
+from project.utils import assign_index
 # Create your views here.
 
 User = get_user_model()
@@ -39,6 +40,7 @@ class GetProjectList(APIView):
             return paginated_response
 
         except Exception as e:
+            print(str(e))
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST)
@@ -145,8 +147,14 @@ class RequestForReview(APIView):
                 return Response({"error": "Please Provide Project Identifier"}, status=status.HTTP_400_BAD_REQUEST)
             project = Project.objects.get(pk=project_id)
             if project.manager.id == request.user.id:
+                re, _ = assign_index(project.id)
+                if project.can_review:
+                    return Response({"success": re}, status=status.HTTP_200_OK)
+                
                 project.can_review = True
             elif project.client.id == request.user.id:
+                if not project.can_review:
+                    return Response({"success": "Already Requested"}, status=status.HTTP_200_OK)
                 project.can_review = False
             else:
                 return Response({"error": "You aren't Authorized to Peform this action"}, status=status.HTTP_403_FORBIDDEN)
@@ -155,4 +163,4 @@ class RequestForReview(APIView):
         except Project.DoesNotExist:
             return Response({"error": "Requested Project Doesn't Exist"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": str(e)}, status=HTTP_500_INTERNAL_SERVER_ERROR)
