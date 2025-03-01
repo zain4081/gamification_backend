@@ -54,7 +54,7 @@ class GetProjectRequirementList(APIView):
             project = project_models.Project.objects.get(pk=project_id)
             if request.user.is_client and project.can_review == False:
                 return Response([], status=status.HTTP_200_OK)
-            requirements = project_models.Requirement.objects.filter(project_id=project.id, )
+            requirements = project_models.Requirement.objects.filter(project_id=project.id, ).order_by('p_index')
             if not request.user.is_pm and not request.user.is_admin:
                 requirements = requirements.filter(is_confirmed=False)
             requirements = requirements.order_by('p_index')
