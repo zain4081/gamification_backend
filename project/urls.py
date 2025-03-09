@@ -19,7 +19,7 @@ urlpatterns = [
          name='requirment-update'),
     path('requirement/<int:requirment_id>/delete/', requirement_views.DeleteProjectRequirement.as_view(),
          name="requirement-delete"),
-    path('requirement/<int:requirment_id>/mark/<int:confirmed>/', requirement_views.MarkRequirmentStatus.as_view(),
+    path('requirement/<int:requirment_id>/mark/', requirement_views.MarkRequirmentStatus.as_view(),
          name='requirement-mark'),
 #   ----------------------------------Points-----------------------------------------------------------
     path('giveVote/<int:requirement_id>/', points_views.UserAddPoints.as_view(), name="add-points"),

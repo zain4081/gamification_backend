@@ -115,12 +115,13 @@ class DeleteProjectRequirement(APIView):
 class MarkRequirmentStatus(APIView):
     authentication_classes = (CustomTokenAuthentication,)
     permission_classes = [IsClient, ]
-    def post(self, request, requirment_id, confirmed=None):
+    def post(self, request, requirment_id):
         try:
+            is_marked = request.data.get("is_marked", False)
             requirment = project_models.Requirement.objects.get(pk=requirment_id)
             if requirment.project.client.id != request.user.id:
                 return Response({"error": "You Aren't Authorized to Perform this Action"}, status=status.HTTP_403_FORBIDDEN)
-            if confirmed:
+            if is_marked:
                 requirment.is_confirmed = True
             requirment.is_marked = True
             requirment.save()
