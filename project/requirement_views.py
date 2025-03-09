@@ -7,7 +7,7 @@ from profile.custom_permissions import IsSelf, IsPmOrAdmin, IsAdmin, IsClient
 from project import models as project_models
 from project.models import Project
 from project.serializers import ProjectSerializer, ProjectAddSerializer, RequirementsSerializer, \
-    AdminRequirementSerializer
+    AdminRequirementSerializer,  ClientRequirementsSerializer
 from profile.CustomPagination import CustomPagination
 
 User = get_user_model()
@@ -60,6 +60,8 @@ class GetProjectRequirementList(APIView):
             requirements = requirements.order_by('p_index')
             if request.user.is_pm or request.user.is_admin:
                 serializer = AdminRequirementSerializer(requirements, many=True)
+            elif request.user.is_client:
+                serializer = ClientRequirementsSerializer(requirements, many=True)
             else:
                 serializer = RequirementsSerializer(requirements, context={'request': request.user.id}, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
