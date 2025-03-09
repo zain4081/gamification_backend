@@ -62,6 +62,7 @@ class RequirementsSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'user': {'read_only': True}  # Prevent user from manually setting this field
         }
+        exclude = ['is_marked', 'is_confirmed']
 
     def get_assignee(self, obj):
         assignee = obj.added_by
@@ -104,6 +105,7 @@ class AdminRequirementSerializer(serializers.ModelSerializer):
         model = Requirement
         fields = ['id', 'name', 'description', 'dueDate', 'tags', 'assignee',
                   'is_all_users_voted', 'users_status', 'score', 'isCompleted']
+        exclude = ['is_marked', 'is_confirmed']
 
     def get_is_all_users_voted(self, obj):
         return obj.is_all_users_voted
@@ -135,3 +137,35 @@ class RequimentListSerializer(serializers.ModelSerializer):
 
     def get_score(self, obj):
         return obj.score
+
+
+class ClientRequirementsSerializer(serializers.ModelSerializer):
+    isCompleted = serializers.BooleanField(default=lambda: random.choice([True, False]))
+    has_form = serializers.SerializerMethodField()  # Field to check if the user has voted
+
+    dueDate = serializers.DateField(default=lambda: fake.date_between(
+        start_date=datetime.today() - timedelta(days=30),
+        end_date=datetime.today() + timedelta(days=30)
+    ))
+    tags = serializers.ListField(child=serializers.CharField(),
+                                 default=lambda: [random.choice(['high', 'medium', 'low']),
+                                                  random.choice(['update', 'team'])])
+    assignee = serializers.SerializerMethodField()
+
+    class Meta:
+        model = project_models.Requirement
+        fields = '__all__'
+        extra_kwargs = {
+            'user': {'read_only': True}
+        }
+
+    def get_assignee(self, obj):
+        assignee = obj.added_by
+        return {
+            'fullName': assignee.username if assignee else 'Unknown',
+            'avatar': '',
+            'id': assignee.id if assignee else None
+        }
+    
+    def get_has_form(self, obj):
+        return True
