@@ -13,6 +13,7 @@ fake = Faker()
 
 class ProjectSerializer(serializers.ModelSerializer):
     voting_status = serializers.SerializerMethodField()
+    marking_status = serializers.SerializerMethodField()
     class Meta:
         model = project_models.Project
         fields = '__all__'
@@ -29,6 +30,14 @@ class ProjectSerializer(serializers.ModelSerializer):
                 continue
             return False
         
+    def get_marking_status(self, obj):
+        requirments = Requirement.objects.filter(project_id=obj.id)
+        mark_req = requirments.filter(is_marked=True)
+
+        print(f"req count {requirments.count()}, marked count {mark_req.count()}")
+        if requirments.count() == mark_req.count():
+            return True
+        return False
 
 class ProjectAddSerializer(serializers.ModelSerializer):
     manager = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
@@ -62,7 +71,6 @@ class RequirementsSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'user': {'read_only': True}  # Prevent user from manually setting this field
         }
-        exclude = ['is_marked', 'is_confirmed']
 
     def get_assignee(self, obj):
         assignee = obj.added_by
@@ -105,7 +113,6 @@ class AdminRequirementSerializer(serializers.ModelSerializer):
         model = Requirement
         fields = ['id', 'name', 'description', 'dueDate', 'tags', 'assignee',
                   'is_all_users_voted', 'users_status', 'score', 'isCompleted']
-        exclude = ['is_marked', 'is_confirmed']
 
     def get_is_all_users_voted(self, obj):
         return obj.is_all_users_voted

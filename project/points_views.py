@@ -9,7 +9,9 @@ from profile.utils import custom_error_message
 from project import models as project_models
 from project.serializers import ProjectSerializer, ProjectAddSerializer, RequirementsSerializer, PointsSerializer
 from profile.CustomPagination import CustomPagination
+from dotenv import dotenv_values
 
+env = dotenv_values()
 # try:
 # except Exception as e:
 #     return Response({"error", str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -21,6 +23,7 @@ class UserAddPoints(APIView):
 
     def post(self, request, requirement_id):
         try:
+            
             points = int(request.data.get('points'))
             if not points:
                 return Response({"error": "Please Enter Points"}, status=status.HTTP_400_BAD_REQUEST)
@@ -36,7 +39,11 @@ class UserAddPoints(APIView):
                 }
                 serializer = PointsSerializer(data=data)
                 if serializer.is_valid():
+                    addedPoints = env.get('POINTS_ON_SUBMIT_VOTE', 0)
                     serializer.save()
+                    user.points += int(addedPoints)
+                    user.save()
+                    return Response({"success": "Points Added Successfully", "should_points": True, "points": addedPoints}, status=status.HTTP_200_OK)
                 print(serializer.errors)
                 return Response(custom_error_message(serializer.errors), status=status.HTTP_400_BAD_REQUEST)
             return Response({"error": "Points can't Exceed Limit"}, status=status.HTTP_400_BAD_REQUEST)

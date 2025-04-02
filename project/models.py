@@ -2,6 +2,11 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from profile.models import TimeStampedModel
 from ckeditor.fields import RichTextField
+from django.utils import timezone
+
+import hashlib
+import json
+
 User = get_user_model()
 
 class Project(TimeStampedModel):
@@ -15,9 +20,36 @@ class Project(TimeStampedModel):
     min_points = models.PositiveIntegerField(default=0)
     max_points = models.PositiveIntegerField(default=10)
     can_review = models.BooleanField(default=False)
+    last_report_hash = models.CharField(max_length=64, null=True, blank=True)  # Store last state hash
+
 
     def __str__(self):
         return self.name
+    
+    def calculate_project_hash(self):
+        """
+        Creates a hash of the project's requirements and their associated points.
+        """
+        requirements = self.requirement_set.all().values('id', 'name', 'is_confirmed', 'is_marked', 'p_index')
+        points = Points.objects.filter(requirement__project=self).values('user_id', 'requirement_id', 'points')
+
+        data = {
+            'requirements': list(requirements),
+            'points': list(points),
+        }
+
+        return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
+    
+    def should_grant_coins(self):
+        """
+        Check if the project state has changed since the last report.
+        """
+        current_hash = self.calculate_project_hash()
+        if self.last_report_hash == current_hash:
+            return False  
+        self.last_report_hash = current_hash
+        self.save()
+        return True
 
 class Requirement(TimeStampedModel):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
@@ -29,7 +61,7 @@ class Requirement(TimeStampedModel):
     p_index = models.PositiveBigIntegerField(default=0)
 
     def __str__(self):
-        return self.name
+        return str(self.id)
     @property
     def is_all_users_voted(self):
         """
@@ -55,14 +87,21 @@ class Requirement(TimeStampedModel):
         """
         Checks if a specific user has voted for this requirement.
         """
-        return self.received_points.filter(user_id=user).exists()
+        points = Points.objects.filter(requirement_id=self.id, user_id=user)
+        print(f" points {points}, {points.count()}")
+        status = False
+        if points.count() > 0:
+            status = True
+        return status
 
-class Points(models.Model):
+class Points(TimeStampedModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="given_points")
     requirement = models.ForeignKey(Requirement, on_delete=models.CASCADE, related_name="received_points")
-    points = models.PositiveIntegerField()
+    points = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     class Meta:
         unique_together = ('user', 'requirement')  # Prevents duplicate points from the same user for the same requirement
 
     def __str__(self):
-        return f"{self.points} points by {self.user} for {self.requirement}"
+        return f"{self.points} points by {self.user} for {self.requirement.id}"

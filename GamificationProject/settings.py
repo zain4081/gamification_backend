@@ -39,20 +39,18 @@ CORS_ALLOW_METHODS = [
     'OPTIONS',  # Ensure OPTIONS is allowed
 ]
 CORS_ALLOW_HEADERS = [
-    'ngrok-skip-browser-warning',  # Allow the ngrok-skip-browser-warning header
-    'accept',
-    'accept-encoding',
-    'authorization',
     'content-type',
-    'cookie',
-    'dnt',
+    'authorization',
+    'accept',
+    'ngrok-skip-browser-warning',
     'origin',
-    'referer',
     'user-agent',
     'x-csrftoken',
-    'x-requested-with',
-    # Add any other headers you need to allow
+    'x-success', 
+    'x-points'
 ]
+
+CORS_EXPOSE_HEADERS = ['x-success', 'x-points'] 
 
 # Application definition
 AUTH_USER_MODEL = 'profile.CustomUser'
@@ -121,6 +119,13 @@ DATABASES = {
     # },
 }
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'TIMEOUT': 5,  # Cache timeout in seconds
+    }
+}
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -151,6 +156,8 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+
+ # ✅ Expose header to frontend
 
 
 # Static files (CSS, JavaScript, Images)

@@ -10,7 +10,7 @@ from profile.serializers import (
     RegisterSerializer,
     UserSerializer, UpdateUserSerializer,
     AddRoleSerializer, AddUserSerializer,
-    RoleSerializer,
+    RoleSerializer, DetailUserSerializer
 )
 from django.contrib.auth import get_user_model
 from profile.utils import (
@@ -146,5 +146,23 @@ class GetRoleList(APIView):
             roles = Roles.objects.all()
             serializer = RoleSerializer(roles, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class GetUserByAdminorPm(APIView):
+    authentication_classes = [CustomTokenAuthentication]
+    permission_classes = [IsPmOrAdmin]
+
+    def get(self, request, user_id):
+        try:
+            user = User.objects.get(pk=user_id)
+            serializer = DetailUserSerializer(user)
+            data = {
+                "user": serializer.data,
+                "details": {}
+            }
+            return Response(data, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response({"error": "User Doens't Exist"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

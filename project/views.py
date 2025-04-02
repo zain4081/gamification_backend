@@ -6,11 +6,26 @@ from django.contrib.auth import get_user_model
 from profile.token_auth import CustomTokenAuthentication
 from profile.custom_permissions import IsSelf, IsPmOrAdmin, IsAdmin
 from project import models as project_models
-from project.models import Project
+from project.models import Project, Points, Requirement
 from project.serializers import ProjectSerializer, ProjectAddSerializer
 from profile.CustomPagination import CustomPagination
 from profile.utils import custom_error_message
 from project.utils import assign_index
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+import io
+from django.db import models
+from datetime import datetime
+from dotenv import dotenv_values
+
+env = dotenv_values()
 # Create your views here.
 
 User = get_user_model()
@@ -45,17 +60,49 @@ class GetProjectList(APIView):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST)
 
+class GetProjectListW(APIView):
+    authentication_classes = (CustomTokenAuthentication,)
+    pagination_class = CustomPagination
+
+    def get(self, request, format=None):
+        try:
+            # Filter projects based on user role
+            projects = project_models.Project.objects.all()
+
+            if request.user.is_client:
+                projects = projects.filter(client_id=request.user.id)
+            elif request.user.is_user:
+                projects = projects.filter(users__in=[request.user.id])
+            else:
+                projects = projects.filter(manager_id=request.user.id)
+            serializer = ProjectSerializer(projects, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(str(e))
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST)
+
 class AddProject(APIView):
     authentication_classes = (CustomTokenAuthentication,)
     permission_classes = (IsPmOrAdmin,)
     def post(self, request, format=None):
         try:
             data = request.data
+            user = User.objects.get(pk=request.user.id)
             data["manager"] = request.user.id
             serializer = ProjectAddSerializer(data=data)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                user.points += int(env.get("POINTS_ON_ADD_PROJECT"))
+                data = {
+                    "project": serializer.data,
+                    "points": env.get("POINTS_ON_ADD_PROJECT")
+                }
+                user.save()
+                print(user.roles, user.points)
+                return Response(data, status=status.HTTP_201_CREATED)
             print(serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -140,27 +187,169 @@ class AssignMinMax(APIView):
 
 class RequestForReview(APIView):
     authentication_classes = [CustomTokenAuthentication,]
+    data = {}
     
     def post(self, request, project_id=None):
+        if not project_id:
+            return self._error("Project ID is required.", status.HTTP_400_BAD_REQUEST)
+
+        project = self._get_project(project_id)
+        if not project:
+            return self._error("Project not found.", status.HTTP_404_NOT_FOUND)
+
+        self.user = request.user
+
+        if self._is_manager(project):
+            return self._handle_manager_action(project)
+
+        if self._is_client(project):
+            return self._handle_client_action(project)
+
+        return self._error("You are not authorized to perform this action.", status.HTTP_403_FORBIDDEN)
+
+    def _get_project(self, project_id):
         try:
-            if not project_id:
-                return Response({"error": "Please Provide Project Identifier"}, status=status.HTTP_400_BAD_REQUEST)
-            project = Project.objects.get(pk=project_id)
-            if project.manager.id == request.user.id:
-                re, _ = assign_index(project.id)
-                if project.can_review:
-                    return Response({"success": re}, status=status.HTTP_200_OK)
-                
-                project.can_review = True
-            elif project.client.id == request.user.id:
-                if not project.can_review:
-                    return Response({"success": "Already Requested"}, status=status.HTTP_200_OK)
-                project.can_review = False
-            else:
-                return Response({"error": "You aren't Authorized to Peform this action"}, status=status.HTTP_403_FORBIDDEN)
-            project.save()
-            return Response({"success": "Successfully Requested"}, status=status.HTTP_200_OK)
+            return Project.objects.get(pk=project_id)
         except Project.DoesNotExist:
-            return Response({"error": "Requested Project Doesn't Exist"}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return None
+
+    def _is_manager(self, project):
+        return project.manager_id == self.user.id
+
+    def _is_client(self, project):
+        return project.client_id == self.user.id
+
+    def _handle_manager_action(self, project):
+        result, _ = assign_index(project.id)
+        if project.can_review:
+            return self._success({"success": "Already requested."})
+
+        project.can_review = True
+        project.save()
+
+        return self._award_points("Request sent successfully.")
+
+    def _handle_client_action(self, project):
+        if not project.can_review:
+            return self._success({"success": "Already requested."})
+
+        project.can_review = False
+        self._reset_unconfirmed_requirements(project)
+        project.save()
+
+        return self._award_points("Request withdrawn successfully.")
+
+    def _reset_unconfirmed_requirements(self, project):
+        project_models.Requirement.objects.filter(
+            project_id=project.id,
+            is_confirmed=False
+        ).update(is_marked=False)
+
+    def _award_points(self, message):
+        points = int(env.get("POINTS_ON_REVIEW_REQUEST", 0))
+        self.user.points += points
+        self.user.save()
+        return self._success({
+            "success": message,
+            "points": points
+        })
+
+    def _error(self, message, code):
+        return Response({"error": message}, status=code)
+
+    def _success(self, data):
+        return Response(data, status=status.HTTP_200_OK)
+        
+
+
+class GenerateProjectReportView(APIView):
+    authentication_classes = [CustomTokenAuthentication]
+
+    def get(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id)
+
+        # Create PDF response
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{project.name}_report.pdf"'
+
+        response['x-success'] = 'False'
+        should_points = project.should_grant_coins()
+        addedPoints = env.get('POINTS_ON_GENERATE_REPORT', 0)
+        if should_points:
+            request.user.points += int(addedPoints)
+            request.user.save()
+            response['x-success'] = 'True'
+            response['x-points'] = addedPoints
+            
+
+        # Setup PDF document
+        doc = SimpleDocTemplate(response, pagesize=A4)
+        elements = []
+
+        # Styles
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(name="Title", fontSize=16, textColor=colors.darkblue, alignment=1, spaceAfter=20)
+        normal_style = styles["Normal"]
+
+        # Add Report Title
+        elements.append(Paragraph("GAMIFYRP: A Gamified Approach to Prioritize Software Requirements", title_style))
+        elements.append(Paragraph(f"<b>Project Name:</b> {project.name}", normal_style))
+        elements.append(Paragraph(f"<b>Project Manager:</b> {project.manager.username}", normal_style))
+        elements.append(Spacer(1, 10))
+
+        # Add Report Metadata
+        elements.append(Paragraph(f"<b>Generated by:</b> {request.user.username}", normal_style))
+        elements.append(Paragraph(f"<b>Date:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", normal_style))
+        elements.append(Spacer(1, 10))
+
+        # Add Contributors
+        contributors = ", ".join([user.username for user in project.users.all()])
+        elements.append(Paragraph(f"<b>Contributors:</b> {contributors}", normal_style))
+        elements.append(Spacer(1, 20))
+
+        # Table Header
+        data = [["Sr#", "Requirement Name", "Priority", "Total Points", "Confirmed"]]
+        
+        # Fetch Requirements & Points
+        requirements = Requirement.objects.filter(project=project)
+        for i, req in enumerate(requirements, start=1):
+            total_points = Points.objects.filter(requirement=req).aggregate(total=models.Sum('points'))['total'] or 0
+            is_confirmed = "Yes" if req.is_confirmed else "No"
+            data.append([str(i), req.name, req.p_index, total_points, is_confirmed])
+
+        # Create Table with Styling
+        table = Table(data, colWidths=[50, 180, 80, 80, 80])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.blue),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ]))
+
+        elements.append(table)
+
+        # Add Header & Footer
+        def add_header(canvas, doc):
+            canvas.saveState()
+            canvas.setFillColor(colors.blue)
+            canvas.rect(0, 800, A4[0], 50, fill=True, stroke=False)
+            canvas.setFillColor(colors.white)
+            canvas.setFont("Helvetica-Bold", 14)
+            canvas.drawCentredString(A4[0] / 2, 820, "GamifyReq - Requirement Prioritization Report")
+            canvas.restoreState()
+
+        def add_footer(canvas, doc):
+            canvas.saveState()
+            canvas.setFont("Helvetica", 9)
+            canvas.setFillColor(colors.grey)
+            canvas.drawCentredString(A4[0] / 2, 30, "Generated using GamifyReq | © 2025")
+            canvas.restoreState()
+
+        # Build PDF
+        doc.build(elements, 
+                  onFirstPage=lambda canvas, doc: (add_header(canvas, doc), add_footer(canvas, doc)),
+                  onLaterPages=lambda canvas, doc: (add_header(canvas, doc), add_footer(canvas, doc)))
+
+        return response

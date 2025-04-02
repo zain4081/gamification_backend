@@ -24,34 +24,86 @@ def assign_index(project_id):
 
         Requirement.objects.bulk_update(requirements, ['p_index'])
         reqs = Requirement.objects.filter(project_id=project_id).order_by('p_index')
-        return RequimentListSerializer(reqs, many=True).data, True
+        return "ok", True
 
     except Exception as e:
         return str(e), False  # Handle unexpected errors properly
        
-        
-    except Exception as e:
-        print("ddd", str(e))
-        return str(e), False
     
-def assign_indices(project_id):
+from django.db.models import Q
 
-    """
-    Assigns a ranking index to each request in the list based on its points.
-    The request with the highest points gets index 1, the next highest gets index 2, etc.
-    
-    Args:
-        reqs (list of dict): A list where each dict contains a 'points' key.
-    
-    Returns:
-        list of dict: The list with each request updated to include an 'index' key.
-    """
-    # Sort the list of requests by points in descending order
-    sorted_reqs = sorted(reqs, key=lambda req: req.points, reverse=True)
-    
-    # Assign an index to each request based on its order in the sorted list
-    for rank, req in enumerate(sorted_reqs, start=1):
-        req["index"] = rank
-    
-    return sorted_reqs
+def is_in_voting(project):
+    return not project.can_review and Points.objects.filter(requirement__project=project).exists() and Requirement.objects.filter(project=project).exists()
+
+def is_finish_voting(project):
+    if project.can_review:
+        return False
+    for req in project.requirement_set.all():
+        if not req.is_all_users_voted:
+            return False
+    return True
+
+def is_in_marking(project):
+    return project.can_review and Requirement.objects.filter(project=project, is_marked=True).exists()
+
+def is_finish_marking(project):
+    if not project.can_review:
+        return False
+    return not Requirement.objects.filter(project=project, is_marked=False).exists()
+
+def is_re_voting(project):
+    return (
+        not project.can_review and
+        Requirement.objects.filter(project=project, is_marked=True).exists() and
+        Requirement.objects.filter(project=project, is_confirmed=False).exists()
+    )
+
+def is_re_marking(project):
+    return (
+        project.can_review and
+        Requirement.objects.filter(project=project, is_marked=True).exists() and
+        Requirement.objects.filter(project=project, is_confirmed=False).exists()
+    )
+
+def is_prioritized(project):
+    return not Requirement.objects.filter(project=project, is_confirmed=False).exists() and Requirement.objects.filter(project=project).exists()
+
+def is_user_in_progress(project, user):
+    return Points.objects.filter(requirement__project=project, user=user).exists()
+
+def is_user_finished(project, user):
+    reqs = project.requirement_set.all()
+    for req in reqs:
+        if not req.has_user_voted(user) or not req.is_confirmed:
+            return False
+    return True
+
+def is_started(project):
+    return not project.can_review and not Points.objects.filter(requirement__project=project).exists()
+
+
+
+def is_sended_to_client(project):
+    if not project.can_review:
+        return False
+    for req in project.requirement_set.all():
+        if not req.is_all_users_voted:
+            return False
+    return True
+
+
+def is_sended_to_developers(project):
+    return not project.can_review and not Requirement.objects.filter(project=project, is_marked=False).exists()
+
+
+
+
+def is_client_in_progress(project, user):
+    return Requirement.objects.filter(project=project, added_by=user, is_marked=True).exists()
+
+def is_client_finished(project, user):
+    reqs = Requirement.objects.filter(project=project, added_by=user)
+    return reqs.exists() and not reqs.filter(Q(is_marked=False) | Q(is_confirmed=False)).exists()
+
+
 

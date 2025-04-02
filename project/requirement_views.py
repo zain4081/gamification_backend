@@ -5,11 +5,13 @@ from django.contrib.auth import get_user_model
 from profile.token_auth import CustomTokenAuthentication
 from profile.custom_permissions import IsSelf, IsPmOrAdmin, IsAdmin, IsClient
 from project import models as project_models
-from project.models import Project
+from project.models import Project, Points
 from project.serializers import ProjectSerializer, ProjectAddSerializer, RequirementsSerializer, \
     AdminRequirementSerializer,  ClientRequirementsSerializer
 from profile.CustomPagination import CustomPagination
+from dotenv import dotenv_values
 
+env = dotenv_values()
 User = get_user_model()
 class AddRequirementView(APIView):
     authentication_classes = (CustomTokenAuthentication,)
@@ -30,7 +32,13 @@ class AddRequirementView(APIView):
             serializer = RequirementsSerializer(requirement_instance, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                request.user.points += int(env.get("POINTS_ON_ADD_REQUIRMENT"))
+                data = {
+                    "requirement": serializer.data,
+                    "points": env.get("POINTS_ON_ADD_REQUIRMENT")
+                }
+                request.user.save()
+                return Response(data, status=status.HTTP_201_CREATED)
             print(serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         except Project.DoesNotExist:
@@ -55,7 +63,8 @@ class GetProjectRequirementList(APIView):
             if request.user.is_client and project.can_review == False:
                 return Response([], status=status.HTTP_200_OK)
             requirements = project_models.Requirement.objects.filter(project_id=project.id, ).order_by('p_index')
-            if not request.user.is_pm and not request.user.is_admin:
+            if request.user.is_user:
+                print("reqs", requirements)
                 requirements = requirements.filter(is_confirmed=False)
             requirements = requirements.order_by('p_index')
             if request.user.is_pm or request.user.is_admin:
@@ -123,9 +132,17 @@ class MarkRequirmentStatus(APIView):
                 return Response({"error": "You Aren't Authorized to Perform this Action"}, status=status.HTTP_403_FORBIDDEN)
             if is_marked:
                 requirment.is_confirmed = True
+            else:
+                Points.objects.filter(requirement_id=requirment.id).delete()
             requirment.is_marked = True
             requirment.save()
-            return Response({"success": "Marked Successfully"}, status=status.HTTP_200_OK)
+            request.user.points += int(env.get("POINTS_ON_MARK_REQUIRMENT"))
+            data = {
+                "success": "Marked Successfully",
+                "points": env.get("POINTS_ON_MARK_REQUIRMENT")
+            }
+            request.user.save()
+            return Response(data, status=status.HTTP_200_OK)
         except project_models.Requirement.DoesNotExist:
             return Response({"error": "Requirment Doesn't Exist"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:

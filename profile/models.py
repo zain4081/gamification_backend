@@ -22,4 +22,5 @@ class CustomUser(TimeStampedModel, AbstractUser):
     reset_password_token = models.CharField(max_length=255, null=True, blank=True)
     is_reset_attempt = models.BooleanField(default=False)
     roles = models.ForeignKey(Roles, on_delete=models.CASCADE)
+    points = models.PositiveBigIntegerField(default=0)
 

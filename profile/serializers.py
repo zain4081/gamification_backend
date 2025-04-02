@@ -35,7 +35,7 @@ class UserSerializer(serializers.ModelSerializer):
     desg = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ["id", "username", "email", "role", "desg"]
+        fields = ["id", "username", "email", "role", "desg", "points"]
 
     def get_role(self, obj):
         if obj.is_admin or obj.is_pm:
@@ -95,3 +95,7 @@ class AddUserSerializer(serializers.ModelSerializer):
         user.save()
         return user
 
+class DetailUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = "__all__"

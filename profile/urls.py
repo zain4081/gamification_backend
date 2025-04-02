@@ -13,6 +13,7 @@ urlpatterns = [
     path('addRole/', admin_views.AdminAddRole.as_view(), name = 'AdminAddRole'),
     path('AddUserbyRole/', admin_views.AdminPmAddUser.as_view(), name = 'AddUser'),
     path('users/', admin_views.AdminPmUserList.as_view(), name = 'UserList'),
+    path('users/<int:user_id>', auth_views.GetUserByAdminorPm.as_view(), name = 'user'),
     path('usersPaginated/', admin_views.AdminPmUserListPaginated.as_view(), name = 'UserListPaginated'),
     path('userDelete/<int:user_id>', admin_views.DeleteUser.as_view(), name = 'DeleteUser'),
     path('getRoles/', auth_views.GetRoleList.as_view(), name= 'RolesList')
