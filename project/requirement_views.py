@@ -66,6 +66,13 @@ class GetProjectRequirementList(APIView):
             if request.user.is_user:
                 print("reqs", requirements)
                 requirements = requirements.filter(is_confirmed=False)
+                for req in requirements:
+                    print(f"{req.id} - {req.project.can_review}")
+                    if req.project.can_review:
+                        return Response({[]}, status=status.HTTP_200_OK)
+                    else:
+                        break
+
             requirements = requirements.order_by('p_index')
             if request.user.is_pm or request.user.is_admin:
                 serializer = AdminRequirementSerializer(requirements, many=True)
